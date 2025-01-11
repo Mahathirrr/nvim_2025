@@ -6,12 +6,12 @@ return {
 		opts = {
 			ensure_installed = {
 				"astro",
+				"cmake",
 				"cpp",
 				"css",
 				"fish",
 				"gitignore",
 				"go",
-				"gomod",
 				"graphql",
 				"http",
 				"java",
@@ -20,7 +20,6 @@ return {
 				"scss",
 				"sql",
 				"svelte",
-				"templ",
 			},
 
 			-- matchup = {
@@ -60,7 +59,6 @@ return {
 			vim.filetype.add({
 				extension = {
 					mdx = "mdx",
-					templ = "templ",
 				},
 			})
 			vim.treesitter.language.register("markdown", "mdx")
