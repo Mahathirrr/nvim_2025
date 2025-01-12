@@ -77,7 +77,7 @@ return {
         "clang-format",
         "js-debug-adapter",
         "phpcbf",
-        "golangci-lint-langserver",
+        -- "golangci-lint-langserver",
         "goimports",
         "gofumpt",
         "gomodifytags",
