@@ -9,12 +9,19 @@ return {
 	-- snippets
 	{
 		"rafamadriz/friendly-snippets",
-		event = "InsertEnter",
-		config = function()
-			require("luasnip.loaders.from_vscode").lazy_load()
-			require("emha.snip")
-		end,
-	},
+  -- add blink.compat to dependencies
+    {
+      "saghen/blink.compat",
+      optional = true, -- make optional so it's only enabled if any extras need it
+      opts = {},
+      version = not vim.g.lazyvim_blink_main and "*",
+    },
+    event = "InsertEnter",
+    config = function()
+      require("luasnip.loaders.from_vscode").lazy_load()
+      require("emha.snip")
+    end,
+    },
 	-- snippets
 	{
 		"L3MON4D3/LuaSnip",
