@@ -178,6 +178,7 @@ return {
     lspconfig["tsserver"].setup({
       capabilities = capabilities,
       on_attach = on_attach,
+      filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact", "html" },
       settings = {
         javascript = {
           inlayHints = {
