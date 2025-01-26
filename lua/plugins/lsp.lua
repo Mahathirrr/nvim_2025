@@ -1,183 +1,424 @@
 return {
-  {
-    "neovim/nvim-lspconfig",
-    event = { "BufReadPre", "BufNewFile" },
-    dependencies = {
-      "mason.nvim",
-      "mason-lspconfig.nvim",
-    },
-    config = function()
-      -- Setup diagnostics
-      local signs = {
-        { name = "DiagnosticSignError", text = "" },
-        { name = "DiagnosticSignWarn",  text = "" },
-        { name = "DiagnosticSignHint",  text = "" },
-        { name = "DiagnosticSignInfo",  text = "" },
-      }
-
-      for _, sign in ipairs(signs) do
-        vim.fn.sign_define(sign.name, { texthl = sign.name, text = sign.text, numhl = "" })
-      end
-
-      vim.diagnostic.config({
-        virtual_text = true,
-        signs = true,
-        update_in_insert = false,
-        underline = true,
-        severity_sort = true,
-        float = {
-          border = "rounded",
-          source = "always",
-          header = "",
-          prefix = "",
-        },
-      })
-
-      -- Setup capabilities
-      local capabilities = vim.lsp.protocol.make_client_capabilities()
-      capabilities.textDocument.completion.completionItem = {
-        documentationFormat = { "markdown", "plaintext" },
-        snippetSupport = true,
-        preselectSupport = true,
-        insertReplaceSupport = true,
-        labelDetailsSupport = true,
-        deprecatedSupport = true,
-        commitCharactersSupport = true,
-        tagSupport = { valueSet = { 1 } },
-        resolveSupport = {
-          properties = {
-            "documentation",
-            "detail",
-            "additionalTextEdits",
-          },
-        },
-      }
-
-      -- Setup handlers
-      local handlers = {
-        ["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, { border = "rounded" }),
-        ["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, { border = "rounded" }),
-      }
-
-      -- Configure LSP servers
-      require("lspconfig").lua_ls.setup({
-        capabilities = capabilities,
-        handlers = handlers,
-        settings = {
-          Lua = {
-            workspace = { checkThirdParty = false },
-            telemetry = { enable = false },
-            completion = {
-              workspaceWord = true,
-              callSnippet = "Both",
-            },
-          },
-        },
-      })
-
-      require("lspconfig").html.setup({
-        capabilities = capabilities,
-        handlers = handlers,
-        filetypes = { "html" },
-        init_options = {
-          configurationSection = { "html", "css", "javascript" },
-          embeddedLanguages = {
-            css = true,
-            javascript = true
-          },
-          provideFormatter = true,
-        },
-      })
-
-      require("lspconfig").emmet_ls.setup({
-        capabilities = capabilities,
-        handlers = handlers,
-        filetypes = {
-          "html", "css", "scss", "javascript", "javascriptreact",
-          "typescript", "typescriptreact", "vue", "svelte",
-          "php", "blade", "astro", "markdown"
-        },
-      })
-
-      require("lspconfig").cssls.setup({
-        capabilities = capabilities,
-        handlers = handlers,
-      })
-
-      require("lspconfig").tailwindcss.setup({
-        capabilities = capabilities,
-        handlers = handlers,
-        root_dir = function(...)
-          return require("lspconfig.util").root_pattern(".git")(...)
-        end,
-        filetypes = {
-          "html", "css", "scss", "javascript", "javascriptreact",
-          "typescript", "typescriptreact", "vue", "svelte",
-          "php", "blade", "astro", "markdown"
-        },
-      })
-
-      require("lspconfig").tsserver.setup({
-        capabilities = capabilities,
-        handlers = handlers,
-        root_dir = function(...)
-          return require("lspconfig.util").root_pattern(".git")(...)
-        end,
-        single_file_support = true,
-        filetypes = {
-          "javascript", "javascriptreact", "javascript.jsx",
-          "typescript", "typescriptreact", "typescript.tsx"
-        },
-        settings = {
-          typescript = {
-            inlayHints = {
-              includeInlayParameterNameHints = "literal",
-              includeInlayParameterNameHintsWhenArgumentMatchesName = false,
-              includeInlayFunctionParameterTypeHints = true,
-              includeInlayVariableTypeHints = false,
-              includeInlayPropertyDeclarationTypeHints = true,
-              includeInlayFunctionLikeReturnTypeHints = true,
-              includeInlayEnumMemberValueHints = true,
-            },
-          },
-          javascript = {
-            inlayHints = {
-              includeInlayParameterNameHints = "all",
-              includeInlayParameterNameHintsWhenArgumentMatchesName = false,
-              includeInlayFunctionParameterTypeHints = true,
-              includeInlayVariableTypeHints = true,
-              includeInlayPropertyDeclarationTypeHints = true,
-              includeInlayFunctionLikeReturnTypeHints = true,
-              includeInlayEnumMemberValueHints = true,
-            },
-          },
-        },
-      })
-
-      -- Setup keymaps setelah LSP attach
-      vim.api.nvim_create_autocmd('LspAttach', {
-        group = vim.api.nvim_create_augroup('UserLspConfig', {}),
-        callback = function(ev)
-          local opts = { buffer = ev.buf }
-          vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, opts)
-          vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
-          vim.keymap.set('n', 'K', vim.lsp.buf.hover, opts)
-          vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, opts)
-          vim.keymap.set('n', '<C-k>', vim.lsp.buf.signature_help, opts)
-          vim.keymap.set('n', '<space>wa', vim.lsp.buf.add_workspace_folder, opts)
-          vim.keymap.set('n', '<space>wr', vim.lsp.buf.remove_workspace_folder, opts)
-          vim.keymap.set('n', '<space>wl', function()
-            print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
-          end, opts)
-          vim.keymap.set('n', '<space>D', vim.lsp.buf.type_definition, opts)
-          vim.keymap.set('n', '<space>rn', vim.lsp.buf.rename, opts)
-          vim.keymap.set({ 'n', 'v' }, '<space>ca', vim.lsp.buf.code_action, opts)
-          vim.keymap.set('n', 'gr', vim.lsp.buf.references, opts)
-          vim.keymap.set('n', '<space>f', function()
-            vim.lsp.buf.format { async = true }
-          end, opts)
-        end,
-      })
-    end,
+  "neovim/nvim-lspconfig",
+  event = { "BufReadPre", "BufNewFile" },
+  dependencies = {
+    "hrsh7th/cmp-nvim-lsp",
+    { "antosha417/nvim-lsp-file-operations", config = true },
   },
+  config = function()
+    -- import lspconfig plugin
+    local lspconfig = require("lspconfig")
+
+    -- import cmp-nvim-lsp plugin
+    local cmp_nvim_lsp = require("cmp_nvim_lsp")
+
+    local keymap = vim.keymap -- for conciseness
+
+    local on_attach = function(client, bufnr)
+      local opts = { noremap = true, silent = true, buffer = bufnr }
+
+      -- set keybinds
+      opts.desc = "Show LSP references"
+      keymap.set("n", "gR", vim.lsp.buf.references, opts) -- show definition, references
+
+      opts.desc = "Go to declaration"
+      keymap.set("n", "gD", vim.lsp.buf.declaration, opts) -- go to declaration
+
+      opts.desc = "Show LSP definitions"
+      keymap.set("n", "gd", vim.lsp.buf.definition, opts) -- show lsp definitions
+
+      opts.desc = "Show LSP implementations"
+      keymap.set("n", "gi", vim.lsp.buf.implementation, opts) -- show lsp implementations
+
+      opts.desc = "Show LSP type definitions"
+      keymap.set("n", "gt", vim.lsp.buf.type_definition, opts) -- show lsp type definitions
+
+      opts.desc = "See available code actions"
+      keymap.set({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, opts) -- see available code actions
+
+      opts.desc = "Smart rename"
+      keymap.set("n", "<leader>rn", vim.lsp.buf.rename, opts) -- smart rename
+
+      opts.desc = "Show buffer diagnostics"
+      keymap.set("n", "<leader>D", vim.diagnostic.setloclist, opts) -- show diagnostics for file
+
+      opts.desc = "Show line diagnostics"
+      keymap.set("n", "<leader>d", vim.diagnostic.open_float, opts) -- show diagnostics for line
+
+      opts.desc = "Go to previous diagnostic"
+      keymap.set("n", "[d", vim.diagnostic.goto_prev, opts) -- jump to previous diagnostic in buffer
+
+      opts.desc = "Go to next diagnostic"
+      keymap.set("n", "]d", vim.diagnostic.goto_next, opts) -- jump to next diagnostic in buffer
+
+      opts.desc = "Show documentation for what is under cursor"
+      keymap.set("n", "K", vim.lsp.buf.hover, opts) -- show documentation for what is under cursor
+
+      opts.desc = "Restart LSP"
+      keymap.set("n", "<leader>rs", ":LspRestart<CR>", opts) -- mapping to restart lsp if necessary
+
+      -- Format on save
+      if client.server_capabilities.documentFormattingProvider then
+        vim.api.nvim_create_autocmd("BufWritePre", {
+          group = vim.api.nvim_create_augroup("Format", { clear = true }),
+          buffer = bufnr,
+          callback = function()
+            vim.lsp.buf.format()
+          end,
+        })
+      end
+    end
+
+    -- used to enable autocompletion (assign to every lsp server config)
+    local capabilities = cmp_nvim_lsp.default_capabilities()
+
+    --Enable (broadcasting) snippet capability for completion
+    local capabilities2 = vim.lsp.protocol.make_client_capabilities()
+    capabilities2.textDocument.completion.completionItem.snippetSupport = true
+
+    -- Change the Diagnostic symbols in the sign column (gutter)
+    -- (not in youtube nvim video)
+    local signs = { Error = " ", Warn = " ", Hint = "󰠠 ", Info = " " }
+    for type, icon in pairs(signs) do
+      local hl = "DiagnosticSign" .. type
+      vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = "" })
+    end
+
+    -- New Config - 10 januari 2025
+    -- HTML Configuration
+    lspconfig.html.setup({
+      capabilities = capabilities2,
+      on_attach = on_attach,
+      filetypes = { "html" },
+      init_options = {
+        configurationSection = { "html", "css", "javascript" },
+        embeddedLanguages = {
+          css = true,
+          javascript = true,
+        },
+        provideFormatter = true,
+      },
+      settings = {
+        html = {
+          validate = {
+            scripts = true,
+            styles = true,
+          },
+          format = {
+            enable = true,
+            wrapLineLength = 120,
+          },
+          hover = {
+            documentation = true,
+            references = true,
+          },
+        },
+      },
+    })
+
+    -- ESLint Configuration
+    lspconfig.eslint.setup({
+      capabilities = capabilities,
+      on_attach = function(client, bufnr)
+        on_attach(client, bufnr)
+        -- Auto fix on save
+        vim.api.nvim_create_autocmd("BufWritePre", {
+          buffer = bufnr,
+          command = "EslintFixAll",
+        })
+      end,
+      settings = {
+        workingDirectory = { mode = "auto" },
+      },
+    })
+
+    -- JSON Configuration
+    lspconfig.jsonls.setup({
+      capabilities = capabilities,
+      on_attach = on_attach,
+      settings = {
+        json = {
+          schemas = require("schemastore").json.schemas(),
+          validate = { enable = true },
+        },
+      },
+    })
+
+    -- -- configure html server
+    -- lspconfig["html"].setup({
+    -- 	capabilities = capabilities2,
+    -- 	on_attach = on_attach,
+    -- 	filetypes = { "html", "templ" },
+    -- })
+
+    lspconfig.htmx.setup({
+      on_attach = on_attach,
+      capabilities = capabilities,
+      filetypes = { "html", "templ" },
+    })
+
+    lspconfig["templ"].setup({
+      capabilities = capabilities2,
+      on_attach = on_attach,
+    })
+
+    lspconfig["ccls"].setup({
+      capabilities = capabilities2,
+      on_attach = on_attach,
+    })
+
+    lspconfig["cmake"].setup({
+      capabilities = capabilities2,
+      on_attach = on_attach,
+    })
+
+    -- configure volar server
+    lspconfig["volar"].setup({
+      capabilities = capabilities,
+      on_attach = on_attach,
+      settings = {
+        init_options = {
+          typescript = {
+            tsdk = vim.fn.stdpath("data")
+                .. "/mason/packages/vue-language-server/node_modules/typescript/lib",
+          },
+        },
+        languageFeatures = {
+          implementation = true,
+          references = true,
+          definition = true,
+          typeDefinition = true,
+          callHierarchy = true,
+          hover = true,
+          rename = true,
+          renameFileRefactoring = true,
+          signatureHelp = true,
+          codeAction = true,
+          workspaceSymbol = true,
+          diagnostics = true,
+          semanticTokens = false,
+        },
+      },
+    })
+
+    -- configure typescript server with plugin
+    lspconfig["tsserver"].setup({
+      capabilities = capabilities,
+      on_attach = on_attach,
+      filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact" },
+      settings = {
+        javascript = {
+          inlayHints = {
+            includeInlayEnumMemberValueHints = true,
+            includeInlayFunctionLikeReturnTypeHints = true,
+            includeInlayFunctionParameterTypeHints = true,
+            includeInlayParameterNameHints = "all", -- 'none' | 'literals' | 'all';
+            includeInlayParameterNameHintsWhenArgumentMatchesName = true,
+            includeInlayPropertyDeclarationTypeHints = true,
+            includeInlayVariableTypeHints = true,
+          },
+        },
+        typescript = {
+          inlayHints = {
+            includeInlayEnumMemberValueHints = true,
+            includeInlayFunctionLikeReturnTypeHints = true,
+            includeInlayFunctionParameterTypeHints = true,
+            includeInlayParameterNameHints = "all", -- 'none' | 'literals' | 'all';
+            includeInlayParameterNameHintsWhenArgumentMatchesName = true,
+            includeInlayPropertyDeclarationTypeHints = true,
+            includeInlayVariableTypeHints = true,
+          },
+        },
+      },
+    })
+
+    -- configure css server
+    lspconfig["cssls"].setup({
+      capabilities = capabilities,
+      on_attach = on_attach,
+    })
+
+    -- configure tailwindcss server
+    lspconfig["tailwindcss"].setup({
+      capabilities = capabilities,
+      on_attach = on_attach,
+      filetypes = { "templ", "astro", "javascript", "typescript", "react" },
+      settings = {
+        tailwindCSS = {
+          includeLanguages = {
+            templ = "html",
+          },
+          classAttributes = { "class", "className", "ngClass" },
+          experimental = {
+            classRegex = {
+              "tw`([^`]*)",   -- tw`...`
+              "tw='([^']*)",  -- <div tw="..." />
+              "tw={`([^`}]*)", -- <div tw={"..."} />
+              "tw\\.\\w+`([^`]*)", -- tw.xxx`...`
+              "tw\\(.*?\\)`([^`]*)", -- tw(component)`...`
+              "styled\\(.*?, '([^']*)'\\)",
+              { "cn\\(([^)]*)\\)",                       "(?:'|\"|`)([^\"'`]*)(?:'|\"|`)" },
+              { "clsx\\(([^]*)\\)",                      "(?:'|\"|`)([^\"'`]*)(?:'|\"|`)" },
+              { "(?:twMerge|twJoin)\\(([^\\);]*)[\\);]", "[`'\"`]([^'\"`,;]*)[`'\"`]" },
+              { "{([\\s\\S]*)}",                         ":\\s*['\"`]([^'\"`]*)['\"`]" },
+            },
+          },
+        },
+      },
+    })
+
+    -- configure svelte server
+    lspconfig["svelte"].setup({
+      capabilities = capabilities,
+      on_attach = function(client, bufnr)
+        on_attach(client, bufnr)
+
+        vim.api.nvim_create_autocmd("BufWritePost", {
+          pattern = { "*.js", "*.ts" },
+          callback = function(ctx)
+            if client.name == "svelte" then
+              client.notify("$/onDidChangeTsOrJsFile", { uri = ctx.file })
+            end
+          end,
+        })
+      end,
+    })
+
+    -- configure prisma orm server
+    lspconfig["prismals"].setup({
+      capabilities = capabilities,
+      on_attach = on_attach,
+    })
+
+    -- configure graphql language server
+    lspconfig["graphql"].setup({
+      capabilities = capabilities,
+      on_attach = on_attach,
+      filetypes = { "graphql", "gql", "svelte", "typescriptreact", "javascriptreact" },
+    })
+
+    -- configure emmet language server
+    lspconfig["emmet_ls"].setup({
+      capabilities = capabilities,
+      on_attach = on_attach,
+      filetypes = {
+        "html",
+        "htmx",
+        "templ",
+        "typescriptreact",
+        "javascriptreact",
+        "css",
+        "sass",
+        "scss",
+        "less",
+        "svelte",
+        "php",
+        "jsx",
+      },
+    })
+
+    -- configure gopls language server
+    lspconfig["gopls"].setup({
+      capabilities = capabilities,
+      on_attach = on_attach,
+      settings = {
+        gopls = {
+          hints = {
+            assignVariableTypes = true,
+            compositeLiteralFields = true,
+            compositeLiteralTypes = true,
+            constantValues = true,
+            functionTypeParameters = true,
+            parameterNames = true,
+            rangeVariableTypes = true,
+          },
+          analyses = {
+            unusedparams = true,
+            shadow = true,
+          },
+          staticcheck = true,
+        },
+      },
+      filetypes = { "go", "gomod", "gotmpl" }, -- adding "gotmpl" for template files
+    })
+
+    -- configure jdtls language server
+    lspconfig["jdtls"].setup({
+      capabilities = capabilities,
+      on_attach = on_attach,
+      filetypes = { "java" },
+      autostart = false,
+    })
+
+    -- configure sqlls language server
+    lspconfig["sqlls"].setup({
+      capabilities = capabilities,
+      on_attach = on_attach,
+      root_dir = function()
+        return vim.loop.cwd()
+      end,
+    })
+
+    -- configure python server
+    lspconfig["pyright"].setup({
+      capabilities = capabilities,
+      on_attach = on_attach,
+      settings = {
+        python = {
+          analysis = {
+            typeCheckingMode = "off",
+          },
+        },
+      },
+    })
+
+    -- configure C/C++ server
+    lspconfig["clangd"].setup({
+      capabilities = capabilities,
+      on_attach = on_attach,
+      cmd = {
+        "clangd",
+        "--offset-encoding=utf-16",
+      },
+    })
+
+    -- configure php server
+    lspconfig["intelephense"].setup({
+      capabilities = capabilities,
+      on_attach = on_attach,
+      root_dir = function(fname)
+        return vim.fn.getcwd()
+      end,
+    })
+
+    -- configure lua server (with special settings)
+    lspconfig["lua_ls"].setup({
+      capabilities = capabilities,
+      on_attach = on_attach,
+      settings = { -- custom settings for lua
+        Lua = {
+          -- make the language server recognize "vim" global
+          semantic = {
+            enable = false,
+          },
+          hint = { enable = true },
+          telemetry = { enable = false },
+          diagnostics = {
+            globals = { "vim" },
+          },
+          workspace = {
+            -- make language server aware of runtime files
+            library = {
+              [vim.fn.expand("$VIMRUNTIME/lua")] = true,
+              [vim.fn.expand("$VIMRUNTIME/lua/vim/lsp")] = true,
+              [vim.fn.stdpath("config") .. "/lua"] = true,
+            },
+            checkThirdParty = false,
+            maxPreload = 100000,
+            preloadFileSize = 10000,
+          },
+        },
+      },
+    })
+  end,
 }
